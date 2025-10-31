@@ -1,315 +1,161 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>🕉️ Divine Cosmic Voice</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Divine Cosmic Voice</title>
 <script src="https://sdk.puter.com/v2/puter.js"></script>
 <style>
-:root{
-  --chakra-size:180px;
-  --gold1:#ffdd66; --gold2:#ff9b33;
-}
-html,body{height:100%;margin:0;background:#000;overflow:hidden;font-family:Inter,system-ui,Arial;}
-canvas#bg{position:fixed;inset:0;z-index:0;display:block}
-#ui{position:fixed;inset:0;z-index:6;display:flex;align-items:center;justify-content:center;pointer-events:none}
-#chakraWrap{pointer-events:auto;width:var(--chakra-size);height:var(--chakra-size);position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer}
-#chakra svg{width:100%;height:100%;will-change:transform}
-#overlay{position:fixed;inset:0;z-index:8;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg, rgba(0,0,0,0.6), rgba(0,0,0,0.6));color:#fff;flex-direction:column;gap:18px;padding:28px;box-sizing:border-box}
-.enter-btn{background:linear-gradient(90deg,var(--gold1),var(--gold2));color:#000;padding:14px 22px;border-radius:999px;border:none;font-weight:800;font-size:18px;cursor:pointer}
-#status{position:fixed;left:20px;top:18px;z-index:9;background:rgba(0,0,0,0.5);color:#fff;padding:8px 12px;border-radius:999px;font-size:13px;pointer-events:none}
-#hint{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:9;color:rgba(255,255,255,0.9);font-size:14px;pointer-events:none}
-.small{font-size:13px;opacity:0.9}
-#chakraAura{position:absolute;inset:calc(50% - var(--chakra-size)/2);border-radius:50%;pointer-events:none;mix-blend-mode:screen;filter:blur(22px);opacity:0.9;transition:filter 0.05s, opacity 0.05s;}
+html,body{margin:0;padding:0;overflow:hidden;height:100%;background:#000;font-family:sans-serif;}
+canvas#bg{position:fixed;inset:0;z-index:0;}
+#ui{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:10;pointer-events:none;}
+#chakraWrap{pointer-events:auto;width:200px;height:200px;cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative;}
+#chakra svg{width:100%;height:100%;}
+#overlay{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.85);color:#fff;flex-direction:column;gap:15px;padding:20px;text-align:center;}
+#enterBtn{padding:14px 22px;font-size:18px;border:none;border-radius:999px;background:linear-gradient(90deg,#ffd966,#ff9b33);color:#000;cursor:pointer;font-weight:800;}
+#status{position:fixed;top:10px;left:10px;color:#fff;background:rgba(0,0,0,0.5);padding:6px 12px;border-radius:12px;font-size:13px;pointer-events:none;}
 </style>
 </head>
 <body>
 <canvas id="bg"></canvas>
 
 <div id="ui">
-  <div id="chakraWrap" aria-hidden="true" title="Tap to speak">
-    <div id="chakraAura" style="width:calc(var(--chakra-size) + 220px); height:calc(var(--chakra-size) + 220px); background: radial-gradient(circle at 40% 30%, rgba(255,220,120,0.25), rgba(255,140,30,0.06) 40%, rgba(30,10,40,0.0) 70%);"></div>
-    <div id="chakra">
-      <svg viewBox="0 0 200 200" role="button" aria-label="Sudarshana Chakra">
-        <defs>
-          <radialGradient id="grad" cx="35%" cy="35%">
-            <stop offset="0" stop-color="#fff9e6" stop-opacity="1"/>
-            <stop offset="0.35" stop-color="#ffebc2" stop-opacity="1"/>
-            <stop offset="1" stop-color="#ff8b2b" stop-opacity="1"/>
-          </radialGradient>
-          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="3" result="blur"/>
-            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
-          <path id="bladePath" d="M2,-78 C12,-60 24,-42 26,-20 C18,-16 8,0 4,20 C0,0 -6,-16 -14,-20 C-12,-40 -2,-60 2,-78 Z"/>
-        </defs>
-        <circle cx="100" cy="100" r="86" fill="url(#grad)" stroke="#ffd88c" stroke-width="3" filter="url(#glow)"></circle>
-        <g id="blades" transform="translate(100,100)"></g>
-        <circle cx="100" cy="100" r="18" fill="#ffefc9" stroke="#ffd07a" stroke-width="2"></circle>
-      </svg>
-    </div>
+  <div id="chakraWrap" title="Tap to speak">
+    <svg viewBox="0 0 200 200">
+      <defs>
+        <radialGradient id="grad" cx="35%" cy="35%">
+          <stop offset="0" stop-color="#fff9e6"/>
+          <stop offset="0.35" stop-color="#ffebc2"/>
+          <stop offset="1" stop-color="#ff8b2b"/>
+        </radialGradient>
+        <path id="bladePath" d="M2,-78 C12,-60 24,-42 26,-20 C18,-16 8,0 4,20 C0,0 -6,-16 -14,-20 C-12,-40 -2,-60 2,-78 Z"/>
+      </defs>
+      <circle cx="100" cy="100" r="86" fill="url(#grad)" stroke="#ffd88c" stroke-width="3"/>
+      <g id="blades" transform="translate(100,100)"></g>
+      <circle cx="100" cy="100" r="18" fill="#ffefc9" stroke="#ffd07a" stroke-width="2"></circle>
+    </svg>
   </div>
 </div>
 
-<div id="overlay" aria-live="polite">
-  <div style="max-width:760px;text-align:center">
-    <div style="font-size:22px;font-weight:800">Enter the Cosmos</div>
-    <div class="small" style="margin-top:8px;opacity:.95">
-      Tap to awaken the Cosmic Voice. First tap enables audio and mic permission.
-      After awakening, the Cosmic Voice speaks in Hindi, then listens continuously.
-    </div>
-    <div style="margin-top:18px">
-      <button id="enterBtn" class="enter-btn">Awaken — Tap to enter</button>
-    </div>
-    <div class="small" style="margin-top:12px;opacity:.85">If the voice doesn't play, allow sound in your browser or try another Chromium-based browser.</div>
-  </div>
+<div id="overlay">
+  <div id="welcomeText">Welcome! Please enter your name:</div>
+  <input type="text" id="userName" placeholder="Enter name" style="padding:10px;font-size:16px;border-radius:6px;border:none;width:160px;text-align:center"/>
+  <button id="enterBtn">Start Divine Voice</button>
 </div>
 
-<div id="status">Initializing…</div>
-<div id="hint">After welcome: speak naturally — the assistant listens and replies aloud.</div>
+<div id="status">Initializing...</div>
 
 <script>
-// ---------------- canvas & cosmic scene ----------------
-const canvas = document.getElementById('bg');
-const ctx = canvas.getContext('2d');
-let W = canvas.width = window.innerWidth;
-let H = canvas.height = window.innerHeight;
+const canvas=document.getElementById('bg');
+const ctx=canvas.getContext('2d');
+let W=canvas.width=window.innerWidth;
+let H=canvas.height=window.innerHeight;
 
-const OVERLAY = document.getElementById('overlay');
-const ENTER_BTN = document.getElementById('enterBtn');
-const STATUS = document.getElementById('status');
-const CHAKRA_WRAP = document.getElementById('chakraWrap');
-const BLADE_G = document.getElementById('blades');
+const overlay=document.getElementById('overlay');
+const enterBtn=document.getElementById('enterBtn');
+const status=document.getElementById('status');
+const chakraWrap=document.getElementById('chakraWrap');
+const blades=document.getElementById('blades');
 
-let audioCtx = null, analyser = null, sourceNode = null;
-let currentAudioEl = null;
-let aiAssistant = null, aiSession = null;
-let conversation = JSON.parse(localStorage.getItem('divine_convo') || '[]');
-let isListening = false, isWelcomed = false;
-let recognition = null;
+let userName='';
+let aiAssistant=null, aiSession=null;
+let conversation=[]; // stored in-memory
 
-// cosmic stars & nebula
-const stars = [], nebula = [];
-function setupScene(){
-  for(let i=0;i<280;i++) stars.push({x:Math.random()*W, y:Math.random()*H, z:Math.random()*W, r:Math.random()*1.6+0.2, hue:200 + Math.random()*80});
-  for(let i=0;i<4;i++) nebula.push({cx:Math.random()*W, cy:Math.random()*H, rx: W*0.5*(0.6+Math.random()), ry: H*0.5*(0.6+Math.random()), hue:220+i*30+Math.random()*40, alpha:0.06+Math.random()*0.12});
-}
-setupScene();
+// ---------- Cosmic stars ----------
+const stars=[];
+for(let i=0;i<200;i++) stars.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.5+0.2,hue:200+Math.random()*80});
 
-// blades
-(function makeBlades(){
-  const count=12;
-  for(let i=0;i<count;i++){
+// ---------- Chakra blades ----------
+(function createBlades(){
+  for(let i=0;i<12;i++){
     const use=document.createElementNS('http://www.w3.org/2000/svg','use');
     use.setAttributeNS('http://www.w3.org/1999/xlink','href','#bladePath');
-    use.setAttribute('transform',`rotate(${(360/count)*i})`);
+    use.setAttribute('transform',`rotate(${(360/12)*i})`);
     use.setAttribute('fill','#ffebc2');
-    BLADE_G.appendChild(use);
+    blades.appendChild(use);
   }
 })();
 
-// ribbons
-const ribbons=[];
-function initRibbons(){for(let i=0;i<160;i++){ribbons.push({angle:Math.random()*Math.PI*2, dist:110+Math.random()*40, speed:0.002+Math.random()*0.01, phase: Math.random()*Math.PI*2, size:1+Math.random()*2});}}
-initRibbons();
-
-// ---------------- Puter TTS ----------------
-async function initPuter(){ 
+// ---------- Puter AI Init ----------
+async function initPuterAI(){
   if(!window.puter) return false;
-  try{ aiAssistant=await puter.ai.createAssistant({name:"DivineCosmicGuru", instructions:"You are a calm heavenly adviser. Answer concisely and kindly."}); aiSession=await aiAssistant.createSession(); return true; }
-  catch(e){ console.warn(e); return false; }
-}
-function detectLanguage(text){ const hindi=/[\u0900-\u097F]/; const sanskrit=/[\u0950\u0964-\u0965]/; if(sanskrit.test(text)) return 'sanskrit'; if(hindi.test(text)) return 'hindi'; return 'english'; }
-function selectVoice(lang){ if(lang==='english') return {voice:'alloy', pitch:'-2st', rate:'slow'}; if(lang==='hindi') return {voice:'alloy_female', pitch:'0st', rate:'medium'}; if(lang==='sanskrit') return {voice:'alloy_female', pitch:'+1st', rate:'slow'}; return {voice:'alloy', pitch:'-2st', rate:'slow'}; }
-
-async function tryPuterTTS(text, lang){
-  if(!window.puter) throw new Error('Puter not loaded');
-  try{
-    const v=selectVoice(lang);
-    const ssml=`<speak><prosody rate="${v.rate}" pitch="${v.pitch}">${text}</prosody></speak>`;
-    const resp=await puter.ai.txt2speech(ssml, { language:lang==='hindi'?'hi-IN':'en-US', voice:v.voice, ssml:true, engine:'neural' });
-    if(resp instanceof HTMLAudioElement) return resp;
-    if(typeof resp==='string') return new Audio(resp);
-    if(typeof resp.toBlob==='function'){ const blob=await resp.toBlob(); return new Audio(URL.createObjectURL(blob)); }
-    if(resp.audioUrl) return new Audio(resp.audioUrl);
-    throw new Error('Unsupported TTS response');
-  }catch(e){ console.warn('Puter TTS failure', e); throw e; }
+  aiAssistant=await puter.ai.createAssistant({
+    name:"DivineCosmicGuru",
+    instructions:`You are a saintly cosmic advisor. Answer users as if you are a sage. Deliver Sanatan scriptures teachings. Use the user's name when responding.`
+  });
+  aiSession=await aiAssistant.createSession();
+  return true;
 }
 
-function speakViaSpeechSynthesis(text, lang='en-US'){ 
-  return new Promise((resolve,reject)=>{ 
-    if(!('speechSynthesis' in window)) return reject(); 
-    const utter=new SpeechSynthesisUtterance(text); utter.lang=lang; utter.rate=0.95; 
-    utter.onend=()=>resolve(); utter.onerror=e=>reject(e); 
-    speechSynthesis.speak(utter); 
-  }); 
+// ---------- Speak ----------
+async function speak(text){
+  if(!window.puter) return speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+  const audio=await puter.ai.txt2speech(text,{voice:'alloy_female',language:'hi-IN',ssml:false});
+  if(audio instanceof HTMLAudioElement) await audio.play();
 }
 
-async function speak(text, opts={}){ 
-  const lang=opts.lang || detectLanguage(text); 
-  try{
-    const audioEl=window.puter ? await tryPuterTTS(text, lang) : null;
-    if(audioEl){
-      if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-      sourceNode=audioCtx.createMediaElementSource(audioEl);
-      analyser=audioCtx.createAnalyser(); analyser.fftSize=512;
-      sourceNode.connect(analyser); analyser.connect(audioCtx.destination);
-      await audioEl.play(); currentAudioEl=audioEl; return audioEl;
-    } else { await speakViaSpeechSynthesis(text, lang==='hindi'?'hi-IN':'en-US'); return null; }
-  }catch(e){ console.warn('Primary TTS failed', e); await speakViaSpeechSynthesis(text, lang==='hindi'?'hi-IN':'en-US'); return null; }
-}
-
-// ---------------- Welcome ----------------
-const WELCOME="स्वागत है, प्रकाश के यात्री। मैं कॉस्मिक वॉइस हूँ। जब आप तैयार हों, बोलें; मैं अनंत परंपरा से ज्ञान प्रदान करूंगा।";
-
-async function onEnterGesture(){
-  OVERLAY.style.display='none';
-  try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){}
-  await initPuter().catch(()=>{});
-  try{ 
-    const audioEl=await speak(WELCOME,{lang:'hi-IN'}); 
-    if(audioEl) await new Promise(res=>audioEl.onended=res);
-    isWelcomed=true; STATUS.textContent='Listening…'; 
-    startListening(); 
-  }catch(e){ console.warn(e); STATUS.textContent='Ready — click chakra to speak'; }
-}
-ENTER_BTN.addEventListener('click', onEnterGesture);
-
-// ---------------- STT & conversation ----------------
+// ---------- STT ----------
+let recognition=null;
 function startListening(){
-  if(isListening) return;
-  if(!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)){ STATUS.textContent='STT unsupported'; return; }
+  if(!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {status.textContent='STT unsupported'; return;}
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   recognition=new SR();
-  recognition.lang='en-IN'; recognition.interimResults=false; recognition.maxAlternatives=1;
-  recognition.onstart=()=>{ isListening=true; STATUS.textContent='Listening…'; }
-  recognition.onend=()=>{ isListening=false; STATUS.textContent='Idle'; }
-  recognition.onerror=(e)=>{ console.warn('STT error',e); STATUS.textContent='STT error'; }
-  recognition.onresult=async (ev)=>{
-    const spoken=ev.results[0][0].transcript;
-    conversation.push({role:'user', text:spoken, ts:Date.now()});
-    localStorage.setItem('divine_convo',JSON.stringify(conversation));
-    STATUS.textContent='Thinking…';
-    let aiText='I could not fetch an answer.';
+  recognition.lang='hi-IN';
+  recognition.interimResults=false;
+  recognition.maxAlternatives=1;
+  recognition.onresult=async e=>{
+    const spoken=e.results[0][0].transcript;
+    conversation.push({role:'user',text:spoken});
+    status.textContent='Thinking...';
+    let aiText='Main iska jawab nahi de sakta.';
     try{
-      if(aiSession){
-        const context=conversation.slice(-8).map(c=>`${c.role.toUpperCase()}: ${c.text}`).join("\n");
-        const resp=await aiSession.prompt(context+"\nUSER: "+spoken);
-        aiText=resp.output_text || resp.text || String(resp);
-      }else{ aiText='The Cosmic Voice is not fully initialized.'; }
-    }catch(e){ console.error('AI error', e); aiText='Error fetching wisdom.'; }
-    conversation.push({role:'assistant', text:aiText, ts:Date.now()});
-    localStorage.setItem('divine_convo',JSON.stringify(conversation));
-    try{ await speak(aiText); startListening(); }catch(e){ console.warn('Error speaking AI reply', e); STATUS.textContent='Ready — click chakra to speak'; }
+      const resp=await aiSession.prompt(`User Name:${userName}\nPrevious:${conversation.map(c=>c.role+":"+c.text).join('\n')}\nUser:${spoken}`);
+      aiText=resp.output_text||resp.text||aiText;
+    }catch(e){ console.warn(e);}
+    conversation.push({role:'assistant',text:aiText});
+    await speak(aiText);
+    startListening();
   };
+  recognition.onend=()=>recognition.start();
   recognition.start();
+  status.textContent='Listening...';
 }
 
-// ---------------- Chakra click ----------------
-CHAKRA_WRAP.addEventListener('click', async ()=>{
-  CHAKRA_WRAP.style.transition='transform .18s ease-out';
-  CHAKRA_WRAP.style.transform='translateX(-50%) scale(1.08)';
-  setTimeout(()=> CHAKRA_WRAP.style.transform='',220);
-  try{
-    if(!isWelcomed){ await speak(WELCOME,{lang:'hi-IN'}); isWelcomed=true; }
-    if(!isListening) startListening();
-    navigator.vibrate?.(30);
-  }catch(e){ console.warn('Error starting STT', e); STATUS.textContent='Click again to enable mic'; }
+// ---------- Chakra click ----------
+chakraWrap.addEventListener('click',()=>{
+  if(!aiSession) return;
+  if(!recognition) startListening();
 });
 
-// ---------------- mobile gesture ----------------
-let touchStartTime=0;
-CHAKRA_WRAP.addEventListener('touchstart',e=>{touchStartTime=Date.now();});
-CHAKRA_WRAP.addEventListener('touchend',e=>{
-  const dt=Date.now()-touchStartTime;
-  if(dt>600){navigator.vibrate?.(50); STATUS.textContent='Conversation reset'; conversation=[]; localStorage.removeItem('divine_convo'); }
-  else{navigator.vibrate?.(30); CHAKRA_WRAP.click();}
+// ---------- Start button ----------
+enterBtn.addEventListener('click',async()=>{
+  userName=document.getElementById('userName').value.trim()||'Yatri';
+  overlay.style.display='none';
+  await initPuterAI();
+  await speak(`नमस्ते ${userName}, मैं आपका दिव्य मार्गदर्शक हूँ। जब आप तैयार हों, बोलें; मैं आपको सनातन परंपरा का ज्ञान दूँगा।`);
+  startListening();
 });
 
-// ---------------- responsive chakra ----------------
-function resizeChakra(){ const w=window.innerWidth; const size=Math.min(180,w*0.35); CHAKRA_WRAP.style.setProperty('--chakra-size',size+'px'); }
-window.addEventListener('resize',resizeChakra); resizeChakra();
-
-// ---------------- auto audio unlock ----------------
-window.addEventListener('touchstart',async function unlockAudio(){ if(audioCtx&&audioCtx.state==='suspended') await audioCtx.resume(); window.removeEventListener('touchstart',unlockAudio); });
-
-// ---------------- hide hint ----------------
-const hintEl=document.getElementById('hint'); setTimeout(()=>{ hintEl.style.opacity=0; },12000);
-
-// ---------------- animation & render ----------------
-function renderScene(amplitude=0){
-  const g=ctx.createRadialGradient(W*0.5,H*0.45,0,W*0.5,H*0.5,Math.max(W,H)*0.9);
-  g.addColorStop(0,`rgba(${20+amplitude*50},${6+amplitude*30},${30+amplitude*50},1)`);
-  g.addColorStop(0.35,`rgba(${10+amplitude*25},${2+amplitude*12},${25+amplitude*40},1)`);
-  g.addColorStop(1,'rgba(0,0,0,1)');
-  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-
-  nebula.forEach((l,idx)=>{
-    const t=performance.now()*0.00006*(1+idx*0.3);
-    const cx=l.cx+Math.sin(t+idx)*40*(0.5+amplitude*2);
-    const cy=l.cy+Math.cos(t+idx*0.6)*30*(0.5+amplitude*2);
-    const rg=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(l.rx,l.ry));
-    rg.addColorStop(0,`hsla(${l.hue},80%,70,50%,${0.25 + amplitude*0.5})`);
-    rg.addColorStop(1, `hsla(${l.hue},80%,15%,0)`);
-    ctx.fillStyle = rg;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, l.rx, l.ry, 0, 0, Math.PI*2);
-    ctx.fill();
-  });
-
-  // stars
-  stars.forEach(s => {
-    s.z -= 2 + amplitude*8;
-    if(s.z < 1) { s.z = W; s.x = Math.random()*W; s.y = Math.random()*H; }
-    const sx = (s.x - W/2) * (W/s.z) + W/2;
-    const sy = (s.y - H/2) * (W/s.z) + H/2;
-    const size = s.r * (W/s.z);
-    ctx.beginPath();
-    ctx.fillStyle = `hsla(${s.hue},100%,${Math.min(0.2 + (1 - s.z/W)*0.9 + amplitude*0.6,1)*100}%,1)`;
-    ctx.arc(sx, sy, Math.max(0.3, size), 0, Math.PI*2);
-    ctx.fill();
-  });
-
-  // ribbons
-  const rect = CHAKRA_WRAP.getBoundingClientRect();
-  const cx = rect.left + rect.width/2;
-  const cy = rect.top + rect.height/2;
-  ribbons.forEach(p => {
-    p.phase += p.speed * (1 + amplitude*8);
-    const ax = cx + Math.cos(p.angle + p.phase) * (p.dist + Math.sin(p.phase*3)*18 + amplitude*40);
-    const ay = cy + Math.sin(p.angle + p.phase) * (p.dist + Math.cos(p.phase*2)*18 + amplitude*40);
-    ctx.beginPath();
-    ctx.fillStyle = `rgba(255,220,120,${0.25 + amplitude*0.85})`;
-    ctx.arc(ax, ay, p.size + amplitude*3, 0, Math.PI*2);
-    ctx.fill();
-  });
-
-  // chakra aura reacts to amplitude
-  const aura = document.getElementById('chakraAura');
-  aura.style.filter = `blur(${22 + amplitude*28}px)`;
-  aura.style.opacity = `${0.7 + amplitude*0.5}`;
-}
-
-// ---------------- animation loop ----------------
+// ---------- Cosmic animate ----------
 function animate(){
   requestAnimationFrame(animate);
-  let amplitude = 0;
-  if(analyser && currentAudioEl){
-    const data = new Uint8Array(analyser.frequencyBinCount);
-    analyser.getByteFrequencyData(data);
-    amplitude = data.reduce((a,b)=>a+b,0)/data.length/256;
-  }
-  renderScene(amplitude);
-  const now = performance.now()/1000;
-  BLADE_G.setAttribute('transform',`translate(100,100) rotate(${now*50 + amplitude*180})`);
+  ctx.fillStyle='#000';
+  ctx.fillRect(0,0,W,H);
+  stars.forEach(s=>{
+    s.y-=0.3;
+    if(s.y<0)s.y=H;
+    ctx.beginPath();
+    ctx.fillStyle=`hsl(${s.hue},80%,70%)`;
+    ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    ctx.fill();
+  });
+  const now=performance.now()/1000;
+  blades.setAttribute('transform',`translate(100,100) rotate(${now*50})`);
 }
 animate();
 
-// ---------------- handle resize ----------------
-window.addEventListener('resize',()=>{
-  W = canvas.width = window.innerWidth;
-  H = canvas.height = window.innerHeight;
-});
+// ---------- Responsive ----------
+window.addEventListener('resize',()=>{W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;});
 </script>
 </body>
 </html>
