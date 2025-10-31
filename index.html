@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>🕉️ Divine Voice — Cosmic Adviser</title>
+
+<!-- Puter.js SDK -->
+<script src="https://sdk.puter.com/v2/puter.js"></script>
+
+<style>
+  :root{
+    --chakra-size: 180px;
+    --gold1: #ffdd66;
+    --gold2: #ff9b33;
+  }
+  html,body{height:100%;margin:0;background:#000;overflow:hidden;font-family:Inter, system-ui, Arial;}
+  #canvas-bg{position:fixed;inset:0;z-index:0}
+  #ui-layer{position:fixed;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+  #chakra-wrap{pointer-events:auto; width:var(--chakra-size); height:var(--chakra-size); position:relative; display:flex; align-items:center; justify-content:center;}
+  #chakra-svg{width:100%;height:100%; will-change:transform; transition:filter .2s linear;}
+  #overlay-instruction{
+    position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.7));
+    color:white; text-align:center; padding:24px; box-sizing:border-box; font-size:18px;
+    display:none; flex-direction:column; gap:14px;
+  }
+  .btn-cta{
+    margin-top:12px;padding:12px 20px;border-radius:999px;border:none;background:linear-gradient(90deg,var(--gold1),var(--gold2));color:#000;font-weight:700;cursor:pointer;
+  }
+  #info-strip{position:absolute;bottom:18px;width:100%;text-align:center;color:rgba(255,255,255,.9);font-size:14px;z-index:6;pointer-events:none}
+  #status-pill{position:absolute;top:20px;left:20px;background:rgba(0,0,0,0.4);color:#fff;padding:8px 12px;border-radius:999px;font-size:13px;z-index:7;pointer-events:none}
+  /* small shimmer glow behind chakra */
+  #chakra-aura{position:absolute;inset:calc(50% - var(--chakra-size)/2);border-radius:50%;pointer-events:none;mix-blend-mode:screen;filter:blur(18px);opacity:0.85}
+</style>
+</head>
+<body>
+<canvas id="canvas-bg"></canvas>
+
+<div id="ui-layer">
+  <div id="chakra-wrap" aria-hidden="true">
+    <!-- Glow aura -->
+    <div id="chakra-aura" style="width: calc(var(--chakra-size) + 220px); height: calc(var(--chakra-size) + 220px); background: radial-gradient(circle at 40% 30%, rgba(255,220,120,0.25), rgba(255,140,30,0.06) 40%, rgba(30,10,40,0.0) 70%);"></div>
+
+    <!-- SVG Sudarshana Chakra (stylized) -->
+    <svg id="chakra-svg" viewBox="0 0 200 200" role="button" title="Tap to speak">
+      <defs>
+        <radialGradient id="g1" cx="35%" cy="35%">
+          <stop offset="0" stop-color="#fff9e6" stop-opacity="1"/>
+          <stop offset="0.35" stop-color="#ffebc2" stop-opacity="1"/>
+          <stop offset="1" stop-color="#ff8b2b" stop-opacity="1"/>
+        </radialGradient>
+        <filter id="innerGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="3" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      <!-- outer ring -->
+      <circle cx="100" cy="100" r="86" fill="url(#g1)" stroke="#ffd88c" stroke-width="3" filter="url(#innerGlow)"></circle>
+
+      <!-- spokes / blades -->
+      <!-- create 12 blades rotated -->
+      <g id="blades" transform="translate(100,100)">
+        <!-- single blade path -->
+        <path id="blade" d="M2,-78 C12,-60 24,-42 26,-20 C18,-16 8,0 4,20 C0,0 -6,-16 -14,-20 C-12,-40 -2,-60 2,-78 Z" fill="#ffebc2" transform="scale(0.85)"></path>
+      </g>
+
+      <!-- center jewel -->
+      <circle cx="100" cy="100" r="18" fill="#ffefc9" stroke="#ffd07a" stroke-width="2"></circle>
+    </svg>
+  </div>
+
+  <div id="info-strip">Touch the chakra or speak after the welcome. The voice listens and replies — pure voice interaction.</div>
+</div>
+
+<!-- Full-screen tap overlay for autoplay fallback -->
+<div id="overlay-instruction" role="dialog" aria-modal="true">
+  <div style="max-width:720px;">
+    <div style="font-size:22px;font-weight:700;margin-bottom:6px">Tap to awaken the Divine Voice</div>
+    <div style="opacity:.88">Autoplay may be blocked by your browser. Tap anywhere to allow audio playback and continue the experience. After this, the cosmic welcome will play and the voice assistant will listen.</div>
+    <button id="overlay-btn" class="btn-cta">Allow sound — Awaken</button>
+    <div style="font-size:13px;margin-top:10px;opacity:.7">If the welcome is already playing, you can ignore this.</div>
+  </div>
+</div>
+
+<div id="status-pill">Initializing…</div>
+
+<script>
+/* =================================================================================
+   Divine Voice - Full immersive voice-first UI
+   - Auto welcome (attempt autoplay). If blocked, show overlay instructing user to tap.
+   - Cinematic cosmic background (nebula + starfield + particle ribbons)
+   - SVG Sudarshana Chakra (rotates and pulses with audio amplitude)
+   - STT -> AI -> TTS continuous loop after welcome
+   - Conversation memory in localStorage
+   ================================================================================= */
+
+const CANVAS = document.getElementById('canvas-bg');
+const ctx = CANVAS.getContext('2d');
+let W = CANVAS.width = window.innerWidth;
+let H = CANVAS.height = window.innerHeight;
+
+const OVERLAY = document.getElementById('overlay-instruction');
+const OVERLAY_BTN = document.getElementById('overlay-btn');
+const STATUS = document.getElementById('status-pill');
+const CHAKRA_SVG = document.getElementById('chakra-svg');
+const CHAKRA_WRAP = document.getElementById('chakra-wrap');
+
+let audioCtx = null, analyser = null, audioSource = null;
+let currentAudio = null;
+let conversation = JSON.parse(localStorage.getItem('divine_convo') || '[]');
+
+let aiAssistant = null, aiSession = null;
+let isWelcomed = false;
+let isListening = false;
+
+/* ------------------------- Cosmic Background Setup ------------------------- */
+const stars = [];
+const nebulaLayers = [];
+function setupScene(){
+  // stars
+  for(let i=0;i<260;i++){
+    stars.push({
+      x: Math.random()*W,
+      y: Math.random()*H,
+      z: Math.random()*W,
+      r: Math.random()*1.6 + 0.2,
+      hue: 220 + Math.random()*60
+    });
+  }
+  // nebula layers (soft color blobs)
+  for(let L=0;L<4;L++){
+    const layer = {
+      cx: Math.random()*W,
+      cy: Math.random()*H,
+      rx: W*0.6*(0.6 + Math.random()*0.8),
+      ry: H*0.6*(0.6 + Math.random()*0.8),
+      hue: 240 + L*30 + Math.random()*40,
+      alpha: 0.06 + Math.random()*0.12
+    };
+    nebulaLayers.push(layer);
+  }
+}
+setupScene();
+
+/* draw nebula + stars per frame; amplitude (0..1) influences brightness and movement */
+function renderScene(amplitude=0){
+  // soft radial background
+  const g = ctx.createRadialGradient(W*0.5, H*0.45, 0, W*0.5, H*0.5, Math.max(W,H)*0.9);
+  g.addColorStop(0, `rgba(${20+amplitude*40}, ${6+amplitude*20}, ${30+amplitude*40}, 1)`);
+  g.addColorStop(0.35, `rgba(${10+amplitude*20}, ${2+amplitude*10}, ${25+amplitude*30}, 1)`);
+  g.addColorStop(1, `rgba(0,0,0,1)`);
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,W,H);
+
+  // draw nebula layers (soft, moving)
+  nebulaLayers.forEach((layer,i)=>{
+    const t = performance.now()*0.00006*(1+i*0.4);
+    const cx = layer.cx + Math.sin(t+i)*40*(0.5+amplitude*3);
+    const cy = layer.cy + Math.cos(t+i*0.6)*30*(0.5+amplitude*3);
+    const rg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(layer.rx, layer.ry));
+    const hue = layer.hue;
+    rg.addColorStop(0, `hsla(${hue},80%,70%,${0.18 + layer.alpha + amplitude*0.1})`);
+    rg.addColorStop(0.5, `hsla(${hue+20},70%,50%,${0.06 + layer.alpha*0.6 + amplitude*0.06})`);
+    rg.addColorStop(1, `rgba(0,0,0,0)`);
+    ctx.fillStyle = rg;
+    ctx.fillRect(0,0,W,H);
+  });
+
+  // moving stars with depth parallax
+  stars.forEach(s=>{
+    // speed based on z and amplitude
+    s.z -= 0.6 + amplitude*6;
+    if(s.z < 1) s.z = W + Math.random()*300;
+    const sx = (s.x - W/2) * (W / s.z) + W/2;
+    const sy = (s.y - H/2) * (H / s.z) + H/2;
+    const size = s.r * (1 + amplitude*2) * (W / s.z) * 0.8;
+    ctx.beginPath();
+    const alpha = 0.25 + (1 - s.z/W) * 0.9 + amplitude*0.5;
+    ctx.fillStyle = `hsla(${s.hue}, 80%, 90%, ${Math.min(alpha,1)})`;
+    ctx.arc(sx, sy, Math.max(0.3,size), 0, Math.PI*2);
+    ctx.fill();
+  });
+
+  // subtle lens glows around center (cosmic center)
+  const centerGlow = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, Math.max(W,H)*0.8);
+  centerGlow.addColorStop(0, `rgba(255,220,140,${0.02 + amplitude*0.05})`);
+  centerGlow.addColorStop(0.3, `rgba(120,60,200,${0.01 + amplitude*0.03})`);
+  centerGlow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = centerGlow;
+  ctx.fillRect(0,0,W,H);
+}
+
+/* ------------------------- Particle ribbon around chakra ------------------------- */
+const ribbonParticles = [];
+function initRibbon(){
+  for(let i=0;i<160;i++){
+    const angle = Math.random()*Math.PI*2;
+    ribbonParticles.push({
+      angle,
+      dist: 110 + Math.random()*40,
+      speed: 0.002 + Math.random()*0.01,
+      phase: Math.random()*Math.PI*2,
+      size: 1 + Math.random()*2
+    });
+  }
+}
+initRibbon();
+function renderRibbon(cx, cy, amplitude){
+  ribbonParticles.forEach(p=>{
+    p.phase += p.speed * (1 + amplitude*6);
+    const ax = cx + Math.cos(p.angle + p.phase) * (p.dist + Math.sin(p.phase*3)*14 + amplitude*30);
+    const ay = cy + Math.sin(p.angle + p.phase) * (p.dist + Math.cos(p.phase*2)*14 + amplitude*30);
+    ctx.beginPath();
+    ctx.fillStyle = `rgba(255,220,120,${0.25 + amplitude*0.65})`;
+    ctx.arc(ax, ay, p.size + amplitude*2, 0, Math.PI*2);
+    ctx.fill();
+  });
+}
+
+/* ------------------------- Chakra SVG blades generation ------------------------- */
+(function makeBlades(){
+  const bladesG = document.getElementById('blades');
+  bladesG.innerHTML = '';
+  const count = 12;
+  for(let i=0;i<count;i++){
+    const use = document.createElementNS('http://www.w3.org/2000/svg','use');
+    use.setAttributeNS('http://www.w3.org/1999/xlink','href','#blade');
+    const rot = (360/count)*i;
+    use.setAttribute('transform', `rotate(${rot})`);
+    bladesG.appendChild(use);
+  }
+})();
+
+/* ------------------------- Audio, Puter AI, TTS flow ------------------------- */
+async function initAI(){
+  try{
+    if(!window.puter) {
+      STATUS.textContent = 'Puter SDK not loaded';
+      console.warn('Puter missing');
+      return;
+    }
+    aiAssistant = await puter.ai.createAssistant({
+      name: "DivineCosmicGuru",
+      instructions: `You are a calm, luminous adviser drawing on Sanatan wisdom. Speak kindly, concisely, and give a short practical takeaway. Always be honest about limits.`
+    });
+    aiSession = await aiAssistant.createSession();
+    STATUS.textContent = 'Ready';
+  }catch(e){
+    console.error(e);
+    STATUS.textContent = 'AI init failed';
+  }
+}
+initAI();
+
+function detectLanguage(text){
+  const hindi=/[\u0900-\u097F]/;
+  const sanskrit=/[\u0950\u0964-\u0965]/;
+  if(sanskrit.test(text)) return 'sanskrit';
+  if(hindi.test(text)) return 'hindi';
+  return 'english';
+}
+function selectVoice(lang){
+  if(lang==='english') return {voice:'alloy', pitch:'-2st', rate:'slow'};
+  if(lang==='hindi') return {voice:'alloy_female', pitch:'0st', rate:'medium'};
+  if(lang==='sanskrit') return {voice:'alloy_female', pitch:'+1st', rate:'slow'};
+  return {voice:'alloy', pitch:'-2st', rate:'slow'};
+}
+
+async function ttsSpeak(text){
+  // Use Puter.js txt2speech; returns audio-like object
+  try{
+    STATUS.textContent = 'Speaking…';
+    const lang = detectLanguage(text);
+    const v = selectVoice(lang);
+    const ssml = `<speak><prosody rate="${v.rate}" pitch="${v.pitch}">${text}</prosody></speak>`;
+    // puter.ai.txt2speech may return an object convertible to blob/url
+    const ttsResp = await puter.ai.txt2speech(ssml, { language: (lang==='hindi'?'hi-IN': 'en-US'), voice: v.voice, ssml:true, engine:'neural' });
+    // ttsResp sometimes is an Audio element or an object with toBlob(); handle common cases:
+    let audioEl;
+    if(ttsResp instanceof HTMLAudioElement) {
+      audioEl = ttsResp;
+    } else if(typeof ttsResp === 'string') {
+      audioEl = new Audio(ttsResp);
+    } else if(typeof ttsResp.toBlob === 'function') {
+      const blob = await ttsResp.toBlob();
+      audioEl = new Audio(URL.createObjectURL(blob));
+    } else if(ttsResp.audioUrl) {
+      audioEl = new Audio(ttsResp.audioUrl);
+    } else {
+      // best-effort fallback: call .toBlob if present
+      try {
+        const blob = await ttsResp.arrayBuffer ? new Blob([await ttsResp.arrayBuffer()]) : null;
+        if(blob) audioEl = new Audio(URL.createObjectURL(blob));
+      } catch(e){}
+    }
+    if(!audioEl) throw new Error('TTS unavailable');
+    // wire analyser
+    await attachAudioAnalyser(audioEl);
+    // play
+    await audioEl.play();
+    currentAudio = audioEl;
+    return audioEl;
+  }catch(err){
+    console.error('TTS error', err);
+    STATUS.textContent = 'TTS failed';
+    throw err;
+  }
+}
+
+async function attachAudioAnalyser(audioEl){
+  try{
+    if(audioCtx) { /* reuse */ }
+    else audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if(source) try{ source.disconnect(); }catch(e){}
+    source = audioCtx.createMediaElementSource(audioEl);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 512;
+    const biquad = audioCtx.createBiquadFilter();
+    biquad.type = 'lowshelf'; biquad.frequency.value = 300; biquad.gain.value = 6;
+    const convolver = audioCtx.createConvolver();
+    // make small impulse response for subtle reverb
+    const ir = audioCtx.createBuffer(2, 22050, audioCtx.sampleRate);
+    for(let ch=0; ch<2; ch++){
+      const data = ir.getChannelData(ch);
+      for(let i=0;i<data.length;i++) data[i] = (Math.random()*2-1) * (1 - i/data.length);
+    }
+    convolver.buffer = ir;
+    source.connect(biquad);
+    biquad.connect(convolver);
+    convolver.connect(analyser);
+    analyser.connect(audioCtx.destination);
+    audioEl.onplay = ()=> audioCtx.resume();
+  }catch(e){
+    console.warn('Analyser attach failed', e);
+  }
+}
+
+/* -------------------- Welcome flow (auto on load, with safe fallback) -------------------- */
+const WELCOME_TEXT = "Welcome, traveler of light. I am the Cosmic Voice. Ask, and I will answer with wisdom drawn from timeless tradition. Speak when you are ready.";
+
+// try autoplay welcome
+async function tryAutoplayWelcome(){
+  try{
+    // try to speak via TTS
+    await initAI();
+    // small delay to let background render
+    await new Promise(r=>setTimeout(r, 400));
+    const audioEl = await ttsSpeak(WELCOME_TEXT);
+    // after welcome finishes, begin listening automatically
+    audioEl.onended = () => {
+      isWelcomed = true;
+      STATUS.textContent = 'Listening…';
+      startListening();
+    };
+    return true;
+  }catch(e){
+    // Autoplay likely blocked
+    console.warn('Autoplay blocked or TTS failed', e);
+    showOverlay();
+    return false;
+  }
+}
+
+/* overlay handling (explicit user gesture to allow audio) */
+function showOverlay(){
+  OVERLAY.style.display = 'flex';
+  STATUS.textContent = 'Tap to enable audio';
+}
+OVERLAY_BTN.addEventListener('click', async ()=>{
+  OVERLAY.style.display = 'none';
+  // Speak welcome now (user gesture available)
+  try{
+    const audioEl = await ttsSpeak(WELCOME_TEXT);
+    audioEl.onended = ()=> {
+      isWelcomed = true;
+      STATUS.textContent = 'Listening…';
+      startListening();
+    };
+  }catch(e){
+    console.error('Welcome after tap failed', e);
+    STATUS.textContent = 'Error playing welcome';
+  }
+});
+
+/* ------------------------- STT and continuous loop ------------------------- */
+let recognition = null;
+function startListening(){
+  if(isListening) return;
+  if(!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    STATUS.textContent = 'STT unsupported in this browser.';
+    return;
+  }
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRec();
+  recognition.lang = 'en-IN';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+  recognition.onstart = ()=> { isListening = true; STATUS.textContent = 'Listening…'; }
+  recognition.onend = ()=> { isListening = false; STATUS.textContent = 'Idle'; }
+  recognition.onerror = (e) => { console.warn('STT error', e); STATUS.textContent = 'STT error'; }
+  recognition.onresult = async (ev) => {
+    const spoken = ev.results[0][0].transcript;
+    // Save user utterance
+    conversation.push({role:'user', text: spoken, ts: Date.now()});
+    localStorage.setItem('divine_convo', JSON.stringify(conversation));
+    STATUS.textContent = 'Thinking…';
+    // Call AI
+    let aiText = "I am unable to answer right now.";
+    try{
+      await initAI();
+      const ctxText = conversation.slice(-10).map(c => `${c.role.toUpperCase()}: ${c.text}`).join("\n");
+      const resp = await aiSession.prompt(ctxText + "\nUSER: " + spoken);
+      aiText = resp.output_text || resp.text || String(resp);
+    }catch(e){
+      console.error('AI error', e);
+      aiText = "I couldn't reach the wisdom source. Try again.";
+    }
+    // Save AI reply
+    conversation.push({role:'assistant', text: aiText, ts: Date.now()});
+    localStorage.setItem('divine_convo', JSON.stringify(conversation));
+    // Speak reply
+    try{
+      const audioEl = await ttsSpeak(aiText);
+      audioEl.onended = ()=> {
+        // after reply, resume listening automatically
+        STATUS.textContent = 'Listening…';
+        startListening();
+      };
+    }catch(e){
+      console.error('TTS reply failed', e);
+      STATUS.textContent = 'TTS failed';
+    }
+  };
+  recognition.start();
+}
+
+/* Chakra interaction: click to start (gesture) and visual feedback */
+CHAKRA_WRAP.addEventListener('click', async (ev)=>{
+  // if overlay present, allow overlay to be used instead
+  if(OVERLAY.style.display === 'flex') return;
+  // quick pulse
+  CHAKRA_SVG.style.transition = 'transform 0.18s ease-out';
+  CHAKRA_SVG.style.transform = 'scale(1.08)';
+  setTimeout(()=> CHAKRA_SVG.style.transform = '', 220);
+  if(!isWelcomed){
+    // on click before welcome: treat as user gesture to play welcome
+    try{
+      const audioEl = await ttsSpeak(WELCOME_TEXT);
+      audioEl.onended = ()=> { isWelcomed=true; STATUS.textContent='Listening…'; startListening(); };
+    }catch(e){
+      showOverlay();
+    }
+    return;
+  }
+  // otherwise start listening if not already
+  if(!isListening) startListening();
+});
+
+/* ------------------------- Animation loop to drive visuals using analyser amplitude ------------------------- */
+function animate(){
+  let amplitude = 0;
+  if(analyser){
+    const freq = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(freq);
+    amplitude = freq.reduce((a,b)=>a+b,0)/freq.length/255;
+    amplitude = Math.min(1, amplitude);
+  }
+  renderScene(amplitude);
+  // position of chakra center
+  const rect = CHAKRA_WRAP.getBoundingClientRect();
+  const cx = rect.left + rect.width/2;
+  const cy = rect.top + rect.height/2;
+  renderRibbon(cx, cy, amplitude);
+  // Chakra pulsing visual via CSS filter & slight scale
+  const scale = 1 + amplitude*0.12;
+  CHAKRA_WRAP.style.transform = `translateX(-50%) scale(${scale})`;
+  requestAnimationFrame(animate);
+}
+
+/* ------------------------- Responsive handling ------------------------- */
+window.addEventListener('resize', ()=>{
+  W = CANVAS.width = window.innerWidth;
+  H = CANVAS.height = window.innerHeight;
+});
+
+/* ------------------------- Start everything ------------------------- */
+(async function start(){
+  // initial render frames to avoid blank black
+  renderScene(0);
+  // attempt autoplay welcome
+  try{
+    await tryAutoplayWelcome();
+  }catch(e){
+    showOverlay();
+  }
+  // start visual animation loop regardless (so background is alive immediately)
+  animate();
+})();
+
+</script>
+</body>
+  </html>
